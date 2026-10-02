@@ -91,12 +91,24 @@ object FrozenRendererRecovery {
     }
 
     /**
+     * Whether a restart should even be considered: only when the launcher window itself is
+     * focused. Without this, a check posted on resume can fire ~500ms later while the system
+     * overview (recents) is on top — restarting with NEW_TASK/CLEAR_TASK then yanks the
+     * launcher task to the front of the recents list.
+     */
+    fun shouldAttemptRestart(hasWindowFocus: Boolean): Boolean = hasWindowFocus
+
+    /**
      * If the ViewRoot attach-info still reports OFF while the display is on, restart the
      * activity so drawing resumes.
      *
      * @return true when a restart was started
      */
     fun maybeRestartIfFrozen(activity: Activity): Boolean {
+        if (!shouldAttemptRestart(activity.hasWindowFocus())) {
+            Log.d(TAG, "Skipping frozen-renderer check: launcher window not focused")
+            return false
+        }
         val viewRootState = readViewRootDisplayState(activity.window.decorView)
         val actualState = actualDisplayState(activity)
         val now = SystemClock.elapsedRealtime()

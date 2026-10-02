@@ -84,6 +84,12 @@ class FrozenRendererRecoveryTest {
     }
 
     @Test
+    fun `shouldAttemptRestart only when launcher window focused`() {
+        assertTrue(FrozenRendererRecovery.shouldAttemptRestart(hasWindowFocus = true))
+        assertFalse(FrozenRendererRecovery.shouldAttemptRestart(hasWindowFocus = false))
+    }
+
+    @Test
     fun `isDisplayVisiblyOn covers ON and ON_SUSPEND only`() {
         assertTrue(FrozenRendererRecovery.isDisplayVisiblyOn(Display.STATE_ON))
         assertTrue(FrozenRendererRecovery.isDisplayVisiblyOn(Display.STATE_ON_SUSPEND))

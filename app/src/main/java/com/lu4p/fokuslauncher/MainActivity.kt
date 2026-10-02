@@ -166,6 +166,9 @@ class MainActivity : AppCompatActivity() {
             // Unlock / focus after sleep can land after onResume; re-check then too.
             window.decorView.removeCallbacks(frozenRendererCheck)
             window.decorView.postDelayed(frozenRendererCheck, FrozenRendererRecovery.CHECK_DELAY_MS)
+        } else {
+            // Overview (recents) or another window took over: never restart into the foreground.
+            window.decorView.removeCallbacks(frozenRendererCheck)
         }
     }
 
