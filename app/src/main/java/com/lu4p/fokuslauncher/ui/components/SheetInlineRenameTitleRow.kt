@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lu4p.fokuslauncher.R
+import com.lu4p.fokuslauncher.ui.theme.legibleTextOn
 
 /**
  * Shared title row for bottom sheets: view mode with edit affordance, or inline rename with
@@ -37,6 +38,12 @@ fun SheetInlineRenameTitleRow(
         textFieldTestTag: String? = null,
         editButtonTestTag: String? = null,
 ) {
+    // Same legibility guard as sheet rows: near-black customs flip to white on the tint.
+    val titleTint =
+            legibleTextOn(
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    MaterialTheme.colorScheme.onBackground,
+            )
     Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
         if (renameMode) {
             OutlinedTextField(
@@ -62,7 +69,7 @@ fun SheetInlineRenameTitleRow(
             Text(
                     text = idleTitle,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = titleTint,
                     modifier = Modifier.weight(1f),
             )
             if (showEditButton) {
@@ -76,7 +83,7 @@ fun SheetInlineRenameTitleRow(
                     LauncherIcon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = editIconContentDescription,
-                            tint = MaterialTheme.colorScheme.onBackground,
+                            tint = titleTint,
                             iconSize = 24.dp,
                     )
                 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import com.lu4p.fokuslauncher.ui.theme.legibleTextOn
 import com.lu4p.fokuslauncher.ui.theme.withLauncherTextGlowRecolored
 import com.lu4p.fokuslauncher.ui.util.clickableWithSystemSound
 import androidx.compose.ui.unit.dp
@@ -36,9 +37,13 @@ fun SheetActionRow(
     require(icon != null || leadingContent != null) {
         "SheetActionRow requires icon or leadingContent"
     }
+    // Sheet fills are accent-tinted dark; a near-black custom would vanish on them.
     val tint =
             if (destructive) MaterialTheme.colorScheme.error
-            else MaterialTheme.colorScheme.onBackground
+            else legibleTextOn(
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    MaterialTheme.colorScheme.onBackground,
+            )
     val labelStyle =
             if (destructive) {
                 MaterialTheme.typography.bodyLarge.withLauncherTextGlowRecolored(tint)

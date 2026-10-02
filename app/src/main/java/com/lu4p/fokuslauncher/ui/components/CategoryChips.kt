@@ -21,6 +21,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lu4p.fokuslauncher.ui.theme.legibleTextOn
 import com.lu4p.fokuslauncher.ui.util.categoryChipDisplayLabel
 import com.lu4p.fokuslauncher.ui.util.rememberClickWithSystemSound
 @Composable
@@ -70,6 +71,17 @@ fun CategoryChips(
                         MaterialTheme.colorScheme.primary.copy(
                                 alpha = if (translucent) 0.78f else 1f
                         )
+                // Near-black customs would render black-on-black; presets are unaffected.
+                val selectedLabelColor =
+                        legibleTextOn(
+                                selectedContainerColor,
+                                MaterialTheme.colorScheme.onPrimary,
+                        )
+                val unselectedLabelColor =
+                        legibleTextOn(
+                                unselectedContainerColor,
+                                MaterialTheme.colorScheme.onSurface,
+                        )
                 FilterChip(
                         selected = isSelected,
                         onClick =
@@ -89,11 +101,10 @@ fun CategoryChips(
                                 FilterChipDefaults.filterChipColors(
                                         containerColor = unselectedContainerColor,
                                         selectedContainerColor = selectedContainerColor,
-                                        labelColor = MaterialTheme.colorScheme.onSurface,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                        iconColor = MaterialTheme.colorScheme.onSurface,
-                                        selectedLeadingIconColor =
-                                                MaterialTheme.colorScheme.onPrimary
+                                        labelColor = unselectedLabelColor,
+                                        selectedLabelColor = selectedLabelColor,
+                                        iconColor = unselectedLabelColor,
+                                        selectedLeadingIconColor = selectedLabelColor
                                 ),
                         border =
                                 FilterChipDefaults.filterChipBorder(

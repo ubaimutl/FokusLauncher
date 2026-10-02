@@ -78,6 +78,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
+import com.lu4p.fokuslauncher.data.model.LauncherVisualStyle
+import com.lu4p.fokuslauncher.ui.theme.ClassicSettingsSurface
+import com.lu4p.fokuslauncher.ui.theme.fokusColorSchemeFor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -312,6 +315,10 @@ private fun DrawerOverflowMenu(
         onToggleReorderApps: () -> Unit,
         modifier: Modifier = Modifier
 ) {
+    // The popup menu uses settings colors (classic): opening it from a dark-custom drawer
+    // must not inherit the drawer's unreadable-on-dark tint. The 3-dot button stays drawer chrome.
+    val classicMenuBg =
+            remember { fokusColorSchemeFor(LauncherVisualStyle.CLASSIC).surfaceVariant }
     Box(modifier = modifier) {
         FokusIconButton(onClick = onMenuToggle, modifier = Modifier.testTag("settings_button")) {
             LauncherIcon(
@@ -326,10 +333,11 @@ private fun DrawerOverflowMenu(
                 onDismissRequest = onMenuDismiss,
                 modifier =
                         Modifier.background(
-                                MaterialTheme.colorScheme.surfaceVariant,
+                                classicMenuBg,
                                 shape = RoundedCornerShape(16.dp)
                         )
         ) {
+            ClassicSettingsSurface {
             if (uiState.isPrivateSpaceSupported) {
                 DrawerDropdownMenuItem(
                         text = {
@@ -390,6 +398,7 @@ private fun DrawerOverflowMenu(
                     },
                     testTag = "menu_settings",
             )
+            } // ClassicSettingsSurface
         }
     }
 }
