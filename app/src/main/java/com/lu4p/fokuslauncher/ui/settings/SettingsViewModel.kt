@@ -47,6 +47,7 @@ import com.lu4p.fokuslauncher.data.model.PhotoWallpaperDrawerOverlayIntensity
 import com.lu4p.fokuslauncher.data.model.PhotoWallpaperOutlineWidthDp
 import com.lu4p.fokuslauncher.data.model.HomeShortcut
 import com.lu4p.fokuslauncher.data.model.ShortcutTarget
+import com.lu4p.fokuslauncher.data.model.SwipeDownMode
 import com.lu4p.fokuslauncher.data.model.WidgetTapTarget
 import java.util.Calendar
 import java.util.UUID
@@ -101,6 +102,7 @@ data class SettingsUiState(
         val rightSideShortcuts: List<HomeShortcut> = emptyList(),
         val swipeLeftTarget: ShortcutTarget? = null,
         val swipeRightTarget: ShortcutTarget? = null,
+        val swipeDownMode: SwipeDownMode = SwipeDownMode.NOTIFICATIONS_ONLY,
         val doubleTapEmptyTarget: WidgetTapTarget? = null,
         val preferredWeatherTap: WidgetTapTarget? = null,
         val preferredClockTap: WidgetTapTarget? = null,
@@ -248,7 +250,7 @@ constructor(
 
     private fun observeState() {
         viewModelScope.launch {
-            val favoritesBaseFlow =
+            val favoritesBaseWithoutSwipeDownFlow =
                     combine(
                             appRepository.getHiddenApps(),
                             appRepository.getAllRenamedApps(),
@@ -263,6 +265,13 @@ constructor(
                                 rightSideShortcuts = rightSideShortcuts,
                                 swipeLeft = swipeLeft,
                         )
+                    }
+            val favoritesBaseFlow =
+                    combine(
+                            favoritesBaseWithoutSwipeDownFlow,
+                            preferencesManager.swipeDownModeFlow,
+                    ) { base, swipeDownMode ->
+                        base.copy(swipeDownMode = swipeDownMode)
                     }
             val categoryMetadataFlow =
                     combine(
@@ -284,6 +293,7 @@ constructor(
                                 favorites = base.favorites,
                                 rightSideShortcuts = base.rightSideShortcuts,
                                 swipeLeft = base.swipeLeft,
+                                swipeDownMode = base.swipeDownMode,
                                 categoryEntities = categories,
                                 categoryDefinitions = definitions.map { it.name },
                                 suppressedCategories = suppressed,
@@ -600,6 +610,7 @@ constructor(
                         rightSideShortcuts = left.rightSideShortcuts,
                         swipeLeftTarget = left.swipeLeft,
                         swipeRightTarget = drawer.swipeRightTarget,
+                        swipeDownMode = left.swipeDownMode,
                         doubleTapEmptyTarget = lockRail.doubleTapEmptyTarget,
                         preferredWeatherTap = drawer.preferredWeatherTap,
                         preferredClockTap = homeWidgetItems.preferredClockTap,
@@ -714,6 +725,7 @@ constructor(
             val favorites: List<FavoriteApp>,
             val rightSideShortcuts: List<HomeShortcut>,
             val swipeLeft: ShortcutTarget?,
+            val swipeDownMode: SwipeDownMode = SwipeDownMode.NOTIFICATIONS_ONLY,
     )
 
     private data class CategoryState(
@@ -722,6 +734,7 @@ constructor(
             val favorites: List<FavoriteApp>,
             val rightSideShortcuts: List<HomeShortcut>,
             val swipeLeft: ShortcutTarget?,
+            val swipeDownMode: SwipeDownMode = SwipeDownMode.NOTIFICATIONS_ONLY,
             val categoryEntities: List<AppCategoryEntity>,
             val categoryDefinitions: List<String>,
             val suppressedCategories: List<String>,
@@ -1001,6 +1014,9 @@ constructor(
 
     fun setSwipeRightTarget(target: ShortcutTarget?) =
             launchPreferences { setSwipeRightTarget(target) }
+
+    fun setSwipeDownMode(mode: SwipeDownMode) =
+            launchPreferences { setSwipeDownMode(mode) }
 
     val twoFingerTargets = TwoFingerDirection.entries.associateWith { direction ->
         preferencesManager.twoFingerTargetFlow(direction).stateWhileSubscribedIn(viewModelScope, null)

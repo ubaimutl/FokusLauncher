@@ -333,12 +333,26 @@ fun FokusNavGraph(
 
                 val swipeLeftTarget by homeViewModel.swipeLeftTarget.collectAsStateWithLifecycle()
                 val swipeRightTarget by homeViewModel.swipeRightTarget.collectAsStateWithLifecycle()
+                val swipeDownMode by navGraphViewModel.swipeDownMode.collectAsStateWithLifecycle()
+                val launcherAppearance by navGraphViewModel.launcherAppearance.collectAsStateWithLifecycle()
+                val launcherFontFamilyName by navGraphViewModel.launcherFontFamilyName.collectAsStateWithLifecycle()
+                val launcherFontScale by navGraphViewModel.launcherFontScale.collectAsStateWithLifecycle()
                 val twoFingerTargets = TwoFingerDirection.entries.associateWith { direction ->
                     val target by homeViewModel.twoFingerTargets.getValue(direction).collectAsStateWithLifecycle()
                     target
                 }
                 val systemAnimationsEnabled = rememberSystemAnimationsEnabled()
 
+                // Home surface: own colors (presets or home custom). Settings/drawer are themed
+                // separately so dark customs never hurt readability outside home.
+                FokusSurfaceTheme(
+                    visualStyle = launcherAppearance.visualStyle,
+                    glowEnabled = launcherAppearance.glowEnabled,
+                    customAccentArgb = launcherAppearance.homeCustomAccentArgb,
+                    fontFamilyName = launcherFontFamilyName,
+                    fontScale = launcherFontScale,
+                    resolveFontFile = navGraphViewModel::resolveCustomFontFile,
+                ) {
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxSize()
@@ -437,13 +451,15 @@ fun FokusNavGraph(
                                     }
                                 },
                             )
-                            .pointerInput(widgetPageSide, widgetDragSide) {
+                            .pointerInput(widgetPageSide, widgetDragSide, swipeDownMode, pageWidthPx) {
                                 var verticalDragOffset = 0f
                                 var drawerTriggered = false
+                                var swipeDownStartX = -1f
                                 detectVerticalDragGestures(
-                                    onDragStart = {
+                                    onDragStart = { startOffset ->
                                         verticalDragOffset = 0f
                                         drawerTriggered = false
+                                        swipeDownStartX = startOffset.x
                                         ignoreVerticalDrag = twoFingersActive
                                     },
                                     onVerticalDrag = { change, dragAmount ->
@@ -466,15 +482,24 @@ fun FokusNavGraph(
                                         }
                                         when {
                                             verticalDragOffset > SWIPE_THRESHOLD -> activity?.let {
-                                                MainActivity.expandStatusBar(it)
+                                                val startX =
+                                                    if (swipeDownStartX < 0f) pageWidthPx / 2f
+                                                    else swipeDownStartX
+                                                if (swipeDownMode.opensQuickSettings(startX, pageWidthPx)) {
+                                                    MainActivity.expandQuickSettings(it)
+                                                } else {
+                                                    MainActivity.expandNotificationsPanel(it)
+                                                }
                                             }
                                         }
                                         verticalDragOffset = 0f
                                         drawerTriggered = false
+                                        swipeDownStartX = -1f
                                     },
                                     onDragCancel = {
                                         verticalDragOffset = 0f
                                         drawerTriggered = false
+                                        swipeDownStartX = -1f
                                     }
                                 )
                             }

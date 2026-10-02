@@ -48,6 +48,12 @@ fun GesturesSettingsScreen(
         LazyColumn(Modifier.fillMaxSize()) {
             item { SectionHeader(stringResource(R.string.settings_gestures_subtitle)) }
             item {
+                SwipeDownModeDropdown(
+                    currentMode = state.swipeDownMode,
+                    onModeSelected = viewModel::setSwipeDownMode,
+                )
+            }
+            item {
                 GestureTargetRow(R.string.settings_swipe_left, state.swipeLeftTarget,
                     state, { picker.value = "swipeLeft" }, { viewModel.setSwipeLeftTarget(null) })
             }

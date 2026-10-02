@@ -181,5 +181,24 @@ class LockScreenAccessibilityService : AccessibilityService() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
             return svc.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
         }
+
+        /**
+         * Opens the notification shade through the official global action. Unlike the hidden
+         * `StatusBarManager.expandNotificationsPanel` API (which some OEM skins map to quick
+         * settings instead), this follows the same path as a user swipe, so each device opens
+         * its own correct panel. Returns false when the service is not enabled.
+         */
+        fun expandNotifications(): Boolean {
+            val svc = instance ?: return false
+            return runCatching { svc.performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS) }
+                    .getOrDefault(false)
+        }
+
+        /** Opens quick settings through the official global action. See [expandNotifications]. */
+        fun expandQuickSettings(): Boolean {
+            val svc = instance ?: return false
+            return runCatching { svc.performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS) }
+                    .getOrDefault(false)
+        }
     }
 }

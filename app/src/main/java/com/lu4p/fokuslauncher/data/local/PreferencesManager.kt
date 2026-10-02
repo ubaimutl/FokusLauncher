@@ -56,6 +56,7 @@ import com.lu4p.fokuslauncher.data.model.serializePomodoroConfig
 import com.lu4p.fokuslauncher.data.model.serializePomodoroRuntime
 import com.lu4p.fokuslauncher.data.model.serializeWorldClockCities
 import com.lu4p.fokuslauncher.data.model.ShortcutTarget
+import com.lu4p.fokuslauncher.data.model.SwipeDownMode
 import com.lu4p.fokuslauncher.utils.WallpaperHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -91,6 +92,7 @@ class PreferencesManager @Inject constructor(@param:ApplicationContext private v
         private val FAVORITES_KEY = stringPreferencesKey("favorite_apps")
         private val SWIPE_LEFT_KEY = stringPreferencesKey("swipe_left_app")
         private val SWIPE_RIGHT_KEY = stringPreferencesKey("swipe_right_app")
+        private val SWIPE_DOWN_MODE_KEY = stringPreferencesKey("swipe_down_mode")
         private val TWO_FINGER_KEYS = TwoFingerDirection.entries.associateWith {
             stringPreferencesKey("two_finger_swipe_${it.name.lowercase()}")
         }
@@ -378,6 +380,18 @@ class PreferencesManager @Inject constructor(@param:ApplicationContext private v
 
     suspend fun setSwipeRightTarget(target: ShortcutTarget?) {
         context.fokusLauncherPreferencesDataStore.edit { prefs -> prefs[SWIPE_RIGHT_KEY] = ShortcutTarget.encode(target) }
+    }
+
+    val swipeDownModeFlow: Flow<SwipeDownMode> =
+            context.fokusLauncherPreferencesDataStore.data.map { prefs ->
+                SwipeDownMode.fromString(prefs[SWIPE_DOWN_MODE_KEY])
+            }
+
+    suspend fun setSwipeDownMode(mode: SwipeDownMode) {
+        context.fokusLauncherPreferencesDataStore.edit { prefs ->
+            if (mode == SwipeDownMode.NOTIFICATIONS_ONLY) prefs.remove(SWIPE_DOWN_MODE_KEY)
+            else prefs[SWIPE_DOWN_MODE_KEY] = mode.name
+        }
     }
 
     val doubleTapEmptyTargetFlow: Flow<WidgetTapTarget?> =

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -29,6 +30,7 @@ import com.lu4p.fokuslauncher.ui.navigation.LauncherHomeCoordinatorViewModel
 import com.lu4p.fokuslauncher.ui.theme.FokusLauncherTheme
 import com.lu4p.fokuslauncher.ui.util.ProvideAppLocale
 import com.lu4p.fokuslauncher.ui.theme.composeFontFamilyFromStoredName
+import com.lu4p.fokuslauncher.accessibility.LockScreenAccessibilityService
 import com.lu4p.fokuslauncher.utils.FrozenRendererRecovery
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -194,22 +196,64 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val TAG = "FokusStatusBar"
+
         /**
          * Expands the notification shade via StatusBarManager.
          * Fallback: show status bar so user can swipe from top.
          */
         fun expandStatusBar(context: Context) {
-            try {
-                val statusBarManager = context.getSystemService("statusbar")
-                val clazz = Class.forName("android.app.StatusBarManager")
-                val method = clazz.getMethod("expandNotificationsPanel")
+            expandNotificationsPanel(context)
+        }
 
-                method.invoke(statusBarManager)
+        /** Opens the notification shade (left-half default for split swipe-down). */
+        fun expandNotificationsPanel(context: Context) {
+            Log.d(TAG, "expandNotificationsPanel requested")
+            if (LockScreenAccessibilityService.expandNotifications()) {
+                Log.d(TAG, "Opened notifications via accessibility global action")
                 return
-            } catch (_: Exception) { }
+            }
+            if (expandPanel(context, "expandNotificationsPanel")) {
+                Log.d(TAG, "Opened notifications via StatusBarManager")
+                return
+            }
+            Log.d(TAG, "Notifications expansion unavailable; revealing transient status bar")
             (context as? Activity)?.let { activity ->
                 WindowInsetsControllerCompat(activity.window, activity.window.decorView)
                     .show(WindowInsetsCompat.Type.statusBars())
+            }
+        }
+
+        /**
+         * Opens quick settings (tiles).
+         * Tries StatusBarManager reflection first: it reliably opens quick settings even on
+         * skins (e.g. RedMagic) where the accessibility quick-settings action misroutes to
+         * the notification shade. Falls back to the accessibility action, then notifications.
+         */
+        fun expandQuickSettings(context: Context) {
+            Log.d(TAG, "expandQuickSettings requested")
+            if (expandPanel(context, "expandSettingsPanel")) {
+                Log.d(TAG, "Opened quick settings via StatusBarManager")
+                return
+            }
+            if (LockScreenAccessibilityService.expandQuickSettings()) {
+                Log.d(TAG, "Opened quick settings via accessibility global action")
+                return
+            }
+            Log.d(TAG, "Quick-settings expansion unavailable; falling back to notifications")
+            expandNotificationsPanel(context)
+        }
+
+        private fun expandPanel(context: Context, methodName: String): Boolean {
+            try {
+                val statusBarManager = context.getSystemService("statusbar") ?: return false
+                val clazz = Class.forName("android.app.StatusBarManager")
+                val method = clazz.getMethod(methodName)
+                method.invoke(statusBarManager)
+                return true
+            } catch (e: Exception) {
+                Log.d(TAG, "StatusBarManager.$methodName failed: ${e.javaClass.simpleName}")
+                return false
             }
         }
     }

@@ -81,6 +81,7 @@ import com.lu4p.fokuslauncher.data.model.NotificationIndicatorStyle
 import com.lu4p.fokuslauncher.data.model.PhotoWallpaperDrawerOverlayIntensity
 import com.lu4p.fokuslauncher.data.model.PhotoWallpaperOutlineWidthDp
 import com.lu4p.fokuslauncher.data.model.ShortcutTarget
+import com.lu4p.fokuslauncher.data.model.SwipeDownMode
 import com.lu4p.fokuslauncher.data.model.TemperatureUnit
 import com.lu4p.fokuslauncher.data.model.WidgetTapTarget
 import com.lu4p.fokuslauncher.ui.components.FokusIconButton
@@ -313,6 +314,33 @@ internal fun TemperatureUnitDropdown(
                 )
             },
             onItemSelected = onUnitSelected,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SwipeDownModeDropdown(
+        currentMode: SwipeDownMode,
+        onModeSelected: (SwipeDownMode) -> Unit,
+) {
+    val options = remember { SwipeDownMode.entries.toList() }
+    var expanded by remember { mutableStateOf(false) }
+    val onExpandedChange = rememberBooleanChangeWithSystemSound { expanded = it }
+    SettingsDropdown(
+            title = stringResource(R.string.settings_swipe_down),
+            subtitle = stringResource(R.string.settings_swipe_down_subtitle),
+            options = options,
+            expanded = expanded,
+            onExpandedChange = onExpandedChange,
+            selectedDisplayText = stringResource(currentMode.labelRes),
+            itemContent = { mode ->
+                Text(
+                        text = stringResource(mode.labelRes),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                )
+            },
+            onItemSelected = onModeSelected,
     )
 }
 

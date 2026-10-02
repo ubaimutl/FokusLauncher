@@ -348,6 +348,12 @@
     <string name="settings_swipe_right">Swipe right</string>
     <string name="settings_gestures">Gestures</string>
     <string name="settings_gestures_subtitle">Swipe and double-tap shortcuts</string>
+    <string name="settings_swipe_down">Swipe down</string>
+    <string name="settings_swipe_down_subtitle">Split modes use the left and right halves of the screen. Quick settings may fall back to notifications on some devices.</string>
+    <string name="swipe_down_mode_notifications_only">Notifications</string>
+    <string name="swipe_down_mode_quick_settings_only">Quick settings</string>
+    <string name="swipe_down_mode_split_left_notif_right_settings">Split: left notifications / right settings</string>
+    <string name="swipe_down_mode_split_left_settings_right_notif">Split: left settings / right notifications</string>
     <string name="settings_two_finger_gestures">Two-finger swipes</string>
     <string name="settings_two_finger_up">Two fingers up</string>
     <string name="settings_two_finger_down">Two fingers down</string>
