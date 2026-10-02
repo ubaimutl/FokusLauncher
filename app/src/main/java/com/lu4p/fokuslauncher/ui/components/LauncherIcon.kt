@@ -80,19 +80,24 @@ fun LauncherIcon(
      * glyph). When false, only monochrome/vector adaptive layers are tinted.
      */
     forceTint: Boolean = false,
+    /**
+     * When true, draws the drawable exactly as-is (full-color original app icons, including
+     * adaptive backgrounds). Implies no tinting: pass [tint] = [Color.Unspecified].
+     */
+    fullColor: Boolean = false,
 ) {
     if (drawable == null) return
     val density = LocalDensity.current
 
     val (painter, canTint) =
-        remember(drawable, density, iconSize, forceTint) {
+        remember(drawable, density, iconSize, forceTint, fullColor) {
             val sizePx = with(density) { iconSize.toPx() }.toInt().coerceAtLeast(1)
 
             var finalDrawable: Drawable = drawable
             var isAdaptive = false
-            var monochrome = forceTint
+            var monochrome = forceTint && !fullColor
 
-            if (drawable is android.graphics.drawable.AdaptiveIconDrawable) {
+            if (!fullColor && drawable is android.graphics.drawable.AdaptiveIconDrawable) {
                 isAdaptive = true
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     drawable.monochrome?.let {
@@ -103,8 +108,8 @@ fun LauncherIcon(
                 if (!monochrome) {
                     finalDrawable = drawable.foreground
                 }
-            } else if (drawable is android.graphics.drawable.VectorDrawable ||
-                drawable.javaClass.name.contains("VectorDrawable")
+            } else if (!fullColor && (drawable is android.graphics.drawable.VectorDrawable ||
+                drawable.javaClass.name.contains("VectorDrawable"))
             ) {
                 monochrome = true
             }

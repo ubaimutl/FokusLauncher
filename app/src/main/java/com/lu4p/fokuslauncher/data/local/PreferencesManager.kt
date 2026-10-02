@@ -1004,6 +1004,15 @@ class PreferencesManager @Inject constructor(@param:ApplicationContext private v
 
     suspend fun setHomeAppIconMode(mode: String) = setPref(HOME_APP_ICON_MODE_KEY, mode)
 
+    val useRealHomeIconsFlow: Flow<Boolean> = prefFlow(USE_REAL_HOME_ICONS_KEY, false)
+
+    suspend fun setUseRealHomeIcons(enabled: Boolean) = setPref(USE_REAL_HOME_ICONS_KEY, enabled)
+
+    val useRealDrawerIconsFlow: Flow<Boolean> = prefFlow(USE_REAL_DRAWER_ICONS_KEY, false)
+
+    suspend fun setUseRealDrawerIcons(enabled: Boolean) =
+            setPref(USE_REAL_DRAWER_ICONS_KEY, enabled)
+
     suspend fun setHomeUsesPhotoWallpaper(usesPhoto: Boolean) {
         context.fokusLauncherPreferencesDataStore.edit { prefs ->
             if (usesPhoto) prefs[HOME_USES_PHOTO_WALLPAPER_KEY] = true

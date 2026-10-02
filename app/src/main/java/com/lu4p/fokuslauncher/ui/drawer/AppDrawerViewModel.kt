@@ -30,6 +30,7 @@ import com.lu4p.fokuslauncher.data.model.appProfileKey
 import com.lu4p.fokuslauncher.data.model.drawerOpenCountKey
 import com.lu4p.fokuslauncher.data.model.favoriteAppStableKey
 import com.lu4p.fokuslauncher.data.iconpack.ArcticonsIconPackRepository
+import com.lu4p.fokuslauncher.data.iconpack.RealAppIconRepository
 import com.lu4p.fokuslauncher.data.repository.AppRepository
 import com.lu4p.fokuslauncher.media.MediaNotificationHelper
 import com.lu4p.fokuslauncher.notification.NotificationIndicatorRepository
@@ -107,6 +108,8 @@ data class AppDrawerUiState(
         val appsWithNotifications: Set<String> = emptySet(),
         /** Opt-in Arcticons icons beside drawer app labels (requires pack installed). */
         val useArcticonsDrawerIcons: Boolean = false,
+        /** Full-color original icons beside drawer app labels. Wins over Arcticons when both on. */
+        val useRealDrawerIcons: Boolean = false,
 )
 
 sealed interface DrawerEvent {
@@ -260,6 +263,7 @@ constructor(
         private val preferencesManager: PreferencesManager,
         private val notificationIndicatorRepository: NotificationIndicatorRepository,
         private val arcticonsIconPackRepository: ArcticonsIconPackRepository,
+        private val realAppIconRepository: RealAppIconRepository,
         @param:Named("DrawerComputation") private val drawerComputationDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -398,16 +402,30 @@ constructor(
             combine(
                             preferencesManager.useArcticonsDrawerIconsFlow,
                             arcticonsIconPackRepository.installedPackage.map { it != null },
-                    ) { enabled, installed ->
-                        enabled && installed
+                            preferencesManager.useRealDrawerIconsFlow,
+                    ) { enabled, installed, useReal ->
+                        (enabled && installed) to useReal
                     }
-                    .collect { showIcons ->
-                        _uiState.update { it.copy(useArcticonsDrawerIcons = showIcons) }
+                    .collect { (showArcticons, useReal) ->
+                        _uiState.update {
+                            it.copy(
+                                    useArcticonsDrawerIcons = showArcticons,
+                                    useRealDrawerIcons = useReal,
+                            )
+                        }
                     }
         }
     }
 
     suspend fun loadArcticonsIcon(app: AppInfo) = arcticonsIconPackRepository.getIcon(app)
+
+    /** Drawer row icon: full-color originals win when enabled, Arcticons stays as fallback. */
+    suspend fun loadDrawerIcon(app: AppInfo): android.graphics.drawable.Drawable? =
+            if (_uiState.value.useRealDrawerIcons) {
+                realAppIconRepository.getIcon(app) ?: arcticonsIconPackRepository.getIcon(app)
+            } else {
+                arcticonsIconPackRepository.getIcon(app)
+            }
 
     /** Ensures the Arcticons appfilter is loaded without wiping icon caches. */
     fun warmArcticonsPack() {

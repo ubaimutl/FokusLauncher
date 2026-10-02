@@ -23,6 +23,7 @@ import com.lu4p.fokuslauncher.data.model.ShortcutTarget
 import com.lu4p.fokuslauncher.data.model.HOST_APP_METADATA_SENTINEL
 import com.lu4p.fokuslauncher.data.model.favoriteAppStableKey
 import com.lu4p.fokuslauncher.data.iconpack.ArcticonsIconPackRepository
+import com.lu4p.fokuslauncher.data.iconpack.RealAppIconRepository
 import com.lu4p.fokuslauncher.data.repository.AppRepository
 import com.lu4p.fokuslauncher.data.repository.RemovedApp
 import com.lu4p.fokuslauncher.notification.NotificationIndicatorRepository
@@ -63,6 +64,7 @@ class AppDrawerViewModelTest {
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var notificationIndicatorRepository: NotificationIndicatorRepository
     private lateinit var arcticonsIconPackRepository: ArcticonsIconPackRepository
+    private lateinit var realAppIconRepository: RealAppIconRepository
     private lateinit var viewModel: AppDrawerViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -118,10 +120,12 @@ class AppDrawerViewModelTest {
         preferencesManager = mockk(relaxed = true)
         notificationIndicatorRepository = mockk(relaxed = true)
         arcticonsIconPackRepository = mockk(relaxed = true)
+        realAppIconRepository = mockk(relaxed = true)
         every { notificationIndicatorRepository.appsWithNotifications } returns
                 MutableStateFlow(emptySet())
         every { arcticonsIconPackRepository.installedPackage } returns arcticonsInstalledPackageFlow
         every { preferencesManager.useArcticonsDrawerIconsFlow } returns useArcticonsDrawerIconsFlow
+        every { preferencesManager.useRealDrawerIconsFlow } returns flowOf(false)
         installedAppsVersion.value = 0L
         every { appRepository.getInstalledAppsVersion() } returns installedAppsVersion.asStateFlow()
         every { appRepository.getRemovedPackages() } returns removedPackages
@@ -176,6 +180,7 @@ class AppDrawerViewModelTest {
                         preferencesManager,
                         notificationIndicatorRepository,
                         arcticonsIconPackRepository,
+                        realAppIconRepository,
                         Dispatchers.Unconfined
                 )
         awaitState("apps to load") { it.allApps.isNotEmpty() }
@@ -224,6 +229,7 @@ class AppDrawerViewModelTest {
                         preferencesManager,
                         notificationIndicatorRepository,
                         arcticonsIconPackRepository,
+                        realAppIconRepository,
                         Dispatchers.Unconfined,
                 )
 

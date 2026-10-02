@@ -163,6 +163,10 @@ data class SettingsUiState(
         val homeAppIconMode: HomeAppIconMode = HomeAppIconMode.TEXT,
         /** True when any whitelisted Arcticons package is installed. */
         val arcticonsInstalled: Boolean = false,
+        /** Full-color originals on home (favorites + rail). Wins over Arcticons there. */
+        val useRealHomeIcons: Boolean = false,
+        /** Full-color originals beside drawer labels. Wins over Arcticons there. */
+        val useRealDrawerIcons: Boolean = false,
         /** True when the home wallpaper is not solid black (image or busy wallpaper). */
         val homeUsesPhotoWallpaper: Boolean = false,
         /** Uniform outline stroke in dp on image wallpaper; 0 = launcher defaults per widget. */
@@ -479,19 +483,43 @@ constructor(
                             preferencesManager.appLocaleTagFlow,
                             preferencesManager.homeAlignmentFlow,
                             combine(
-                                    preferencesManager.allowLandscapeRotationFlow,
-                                    preferencesManager.useArcticonsDrawerIconsFlow,
-                                    preferencesManager.homeAppIconModeFlow,
-                                    arcticonsIconPackRepository.installedPackage.map {
-                                        it != null
+                                    combine(
+                                            preferencesManager.allowLandscapeRotationFlow,
+                                            preferencesManager.useArcticonsDrawerIconsFlow,
+                                    ) { allowLandscape, useArcticons ->
+                                        allowLandscape to useArcticons
                                     },
-                            ) { allowLandscape, useArcticons, homeIconMode, arcticonsInstalled ->
-                                Triple(allowLandscape, useArcticons, HomeAppIconMode.fromStored(homeIconMode)) to arcticonsInstalled
+                                    combine(
+                                            preferencesManager.homeAppIconModeFlow,
+                                            arcticonsIconPackRepository.installedPackage.map {
+                                                it != null
+                                            },
+                                    ) { homeIconMode, arcticonsInstalled ->
+                                        HomeAppIconMode.fromStored(homeIconMode) to
+                                                arcticonsInstalled
+                                    },
+                                    combine(
+                                            preferencesManager.useRealHomeIconsFlow,
+                                            preferencesManager.useRealDrawerIconsFlow,
+                                    ) { useRealHome, useRealDrawer ->
+                                        useRealHome to useRealDrawer
+                                    },
+                            ) { landscapeArcticons, modeInstalled, realIcons ->
+                                LandscapeAndIcons(
+                                        allowLandscape = landscapeArcticons.first,
+                                        useArcticons = landscapeArcticons.second,
+                                        homeIconMode = modeInstalled.first,
+                                        arcticonsInstalled = modeInstalled.second,
+                                        useRealHomeIcons = realIcons.first,
+                                        useRealDrawerIcons = realIcons.second,
+                                )
                             },
                     ) { fontOutlineDrawer, localeTag, homeAlignment, landscapeAndIcons ->
                         val (fontVisual, outlineWidthDp, drawerOverlayIntensity) = fontOutlineDrawer
-                        val (allowLandscape, useArcticons, homeIconMode) = landscapeAndIcons.first
-                        val arcticonsInstalled = landscapeAndIcons.second
+                        val allowLandscape = landscapeAndIcons.allowLandscape
+                        val useArcticons = landscapeAndIcons.useArcticons
+                        val homeIconMode = landscapeAndIcons.homeIconMode
+                        val arcticonsInstalled = landscapeAndIcons.arcticonsInstalled
                         LookPrefs(
                                 launcherFontFamilyName = fontVisual.family,
                                 hasCustomFontFile = customFontStore.hasStoredFont(),
@@ -504,6 +532,8 @@ constructor(
                                 useArcticonsDrawerIcons = useArcticons,
                                 homeAppIconMode = homeIconMode,
                                 arcticonsInstalled = arcticonsInstalled,
+                                useRealHomeIcons = landscapeAndIcons.useRealHomeIcons,
+                                useRealDrawerIcons = landscapeAndIcons.useRealDrawerIcons,
                                 homeUsesPhotoWallpaper = fontVisual.usesPhotoWallpaper,
                                 photoWallpaperOutlineWidthDp = outlineWidthDp,
                                 photoWallpaperDrawerOverlayIntensity = drawerOverlayIntensity,
@@ -663,6 +693,8 @@ constructor(
                         useArcticonsDrawerIcons = look.useArcticonsDrawerIcons,
                         homeAppIconMode = look.homeAppIconMode,
                         arcticonsInstalled = look.arcticonsInstalled,
+                        useRealHomeIcons = look.useRealHomeIcons,
+                        useRealDrawerIcons = look.useRealDrawerIcons,
                         homeUsesPhotoWallpaper = look.homeUsesPhotoWallpaper,
                         photoWallpaperOutlineWidthDp = look.photoWallpaperOutlineWidthDp,
                         photoWallpaperDrawerOverlayIntensity =
@@ -771,6 +803,15 @@ constructor(
             val customFontDisplayName: String,
     )
 
+    private data class LandscapeAndIcons(
+            val allowLandscape: Boolean = false,
+            val useArcticons: Boolean = false,
+            val homeIconMode: HomeAppIconMode = HomeAppIconMode.TEXT,
+            val arcticonsInstalled: Boolean = false,
+            val useRealHomeIcons: Boolean = false,
+            val useRealDrawerIcons: Boolean = false,
+    )
+
     private data class LookPrefs(
             val launcherFontFamilyName: String,
             val hasCustomFontFile: Boolean,
@@ -780,6 +821,8 @@ constructor(
             val launcherGlowEnabled: Boolean,
             val homeCustomAccentArgb: Int = 0,
             val drawerCustomAccentArgb: Int = 0,
+            val useRealHomeIcons: Boolean = false,
+            val useRealDrawerIcons: Boolean = false,
             val useArcticonsDrawerIcons: Boolean,
             val homeAppIconMode: HomeAppIconMode,
             val arcticonsInstalled: Boolean,
@@ -1224,13 +1267,32 @@ constructor(
     }
 
     fun setHomeAppIconMode(mode: HomeAppIconMode): Boolean {
-        if (mode != HomeAppIconMode.TEXT) {
+        if (mode != HomeAppIconMode.TEXT && !uiState.value.useRealHomeIcons) {
             arcticonsIconPackRepository.refreshInstalledPackage()
             if (!arcticonsIconPackRepository.isArcticonsInstalled()) return false
         }
         launchPreferences { setHomeAppIconMode(mode.name) }
         return true
     }
+
+    /**
+     * Enables full-color originals on home. Bumps text-only mode up to labels so the icons
+     * actually show (mirrors enabling Arcticons without the pack requirement).
+     */
+    fun setUseRealHomeIcons(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesManager.setUseRealHomeIcons(enabled)
+            if (enabled &&
+                            preferencesManager.homeAppIconModeFlow.first() ==
+                                    HomeAppIconMode.TEXT.name
+            ) {
+                preferencesManager.setHomeAppIconMode(HomeAppIconMode.WITH_LABEL.name)
+            }
+        }
+    }
+
+    fun setUseRealDrawerIcons(enabled: Boolean) =
+            launchPreferences { setUseRealDrawerIcons(enabled) }
 
     fun refreshArcticonsInstallState() {
         // Detect install/uninstall only; keep appfilter + icon caches when the pack is unchanged.

@@ -253,6 +253,7 @@ private fun LazyItemScope.ReorderableDrawerAppListItem(
         notificationIndicatorColor: Int = NotificationIndicatorColorPreset.DEFAULT.argb,
         appsWithNotifications: Set<String> = emptySet(),
         useArcticonsDrawerIcons: Boolean = false,
+        useRealDrawerIcons: Boolean = false,
 ) {
     ReorderableDrawerAppRow(
             allowCustomDragReorder = allowCustomDragReorder,
@@ -279,6 +280,7 @@ private fun LazyItemScope.ReorderableDrawerAppListItem(
                 reserveNotificationDotSlot = showNotificationIndicators &&
                         notificationIndicatorStyle == NotificationIndicatorStyle.DOT,
                 useArcticonsDrawerIcons = useArcticonsDrawerIcons,
+                useRealDrawerIcons = useRealDrawerIcons,
         )
     }
 }
@@ -559,6 +561,7 @@ private fun DrawerAppListColumn(
                             notificationIndicatorColor = uiState.notificationIndicatorColor,
                             appsWithNotifications = uiState.appsWithNotifications,
                             useArcticonsDrawerIcons = uiState.useArcticonsDrawerIcons,
+                            useRealDrawerIcons = uiState.useRealDrawerIcons,
                     )
                 }
             }
@@ -651,6 +654,7 @@ private fun DrawerAppListColumn(
                         notificationIndicatorColor = uiState.notificationIndicatorColor,
                         appsWithNotifications = uiState.appsWithNotifications,
                         useArcticonsDrawerIcons = uiState.useArcticonsDrawerIcons,
+                        useRealDrawerIcons = uiState.useRealDrawerIcons,
                 )
             }
         }
@@ -740,8 +744,9 @@ fun AppDrawerScreen(
         }
     }
 
+    // Real originals win when enabled (inside loadDrawerIcon); otherwise Arcticons as before.
     val arcticonsIconLoader: suspend (AppInfo) -> android.graphics.drawable.Drawable? =
-            remember(viewModel) { { app -> viewModel.loadArcticonsIcon(app) } }
+            remember(viewModel) { { app -> viewModel.loadDrawerIcon(app) } }
 
     CompositionLocalProvider(
             LocalArcticonsIconLoader provides arcticonsIconLoader,
@@ -1342,6 +1347,7 @@ fun AppListItem(
         notificationIndicatorColor: Int = NotificationIndicatorColorPreset.DEFAULT.argb,
         reserveNotificationDotSlot: Boolean = false,
         useArcticonsDrawerIcons: Boolean = false,
+        useRealDrawerIcons: Boolean = false,
 ) {
     val textColor = MaterialTheme.colorScheme.onBackground
     val indicatorColor = Color(notificationIndicatorColor)
@@ -1379,8 +1385,8 @@ fun AppListItem(
             )
             Spacer(modifier = Modifier.width(8.dp))
         }
-        if (useArcticonsDrawerIcons) {
-            ArcticonsDrawerAppIcon(app = app, tint = textColor)
+        if (useArcticonsDrawerIcons || useRealDrawerIcons) {
+            DrawerAppIcon(app = app, tint = textColor, useRealIcons = useRealDrawerIcons)
             Spacer(modifier = Modifier.width(12.dp))
         }
         Text(
@@ -1396,8 +1402,9 @@ private val ArcticonsDrawerIconSlotSize = 34.dp
 private val ArcticonsDrawerIconSize = 32.dp
 private val ArcticonsDrawerIconPlaceholderSize = 24.dp
 
+/** Drawer icon slot — same small size as Arcticons, but optionally the full-color original. */
 @Composable
-private fun ArcticonsDrawerAppIcon(app: AppInfo, tint: Color) {
+private fun DrawerAppIcon(app: AppInfo, tint: Color, useRealIcons: Boolean = false) {
     val loadIcon = LocalArcticonsIconLoader.current
     val iconKey = appListStableKey(app)
     val loadedIcon by
@@ -1414,13 +1421,23 @@ private fun ArcticonsDrawerAppIcon(app: AppInfo, tint: Color) {
     ) {
         val drawable = loadedIcon
         if (drawable != null) {
-            LauncherIcon(
-                    drawable = drawable,
-                    contentDescription = stringResource(R.string.cd_app_icon),
-                    tint = tint,
-                    iconSize = ArcticonsDrawerIconSize,
-                    forceTint = true,
-            )
+            if (useRealIcons) {
+                LauncherIcon(
+                        drawable = drawable,
+                        contentDescription = stringResource(R.string.cd_app_icon),
+                        tint = Color.Unspecified,
+                        iconSize = ArcticonsDrawerIconSize,
+                        fullColor = true,
+                )
+            } else {
+                LauncherIcon(
+                        drawable = drawable,
+                        contentDescription = stringResource(R.string.cd_app_icon),
+                        tint = tint,
+                        iconSize = ArcticonsDrawerIconSize,
+                        forceTint = true,
+                )
+            }
         } else {
             // Brief load / last-resort only — unmapped apps use Arcticons' outlined `circle`.
             Box(

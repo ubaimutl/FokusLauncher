@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.location.LocationManager
 import android.os.BatteryManager
 import android.os.Process
@@ -22,6 +23,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lu4p.fokuslauncher.data.local.PreferencesManager
 import com.lu4p.fokuslauncher.data.iconpack.ArcticonsIconPackRepository
+import com.lu4p.fokuslauncher.data.iconpack.RealAppIconRepository
 import com.lu4p.fokuslauncher.data.local.TwoFingerDirection
 import com.lu4p.fokuslauncher.data.model.AppInfo
 import com.lu4p.fokuslauncher.data.model.dynamicCategoryExtras
@@ -115,6 +117,8 @@ data class HomeUiState(
     /** Uniform outline stroke in dp when [usesPhotoWallpaper]; 0 = per-widget defaults. */
     val photoWallpaperOutlineWidthDp: Float = PhotoWallpaperOutlineWidthDp.DEFAULT,
     val homeAppIconMode: HomeAppIconMode = HomeAppIconMode.TEXT,
+    /** Full-color original app icons on home (favorites + shortcut rail). */
+    val useRealHomeIcons: Boolean = false,
 )
 
 data class HomeNotificationIndicatorUiState(
@@ -196,6 +200,7 @@ class HomeViewModel @Inject constructor(
     private val appRepository: AppRepository,
     private val preferencesManager: PreferencesManager,
     private val arcticonsIconPackRepository: ArcticonsIconPackRepository,
+    private val realAppIconRepository: RealAppIconRepository,
     private val weatherRepository: WeatherRepository,
     private val mediaRepository: MediaRepository,
     private val screenTimeRepository: ScreenTimeRepository,
@@ -1094,21 +1099,47 @@ class HomeViewModel @Inject constructor(
     private fun observeHomeAppIcons() {
         observeFlow(
             combine(
-                preferencesManager.homeAppIconModeFlow,
-                preferencesManager.useArcticonsDrawerIconsFlow,
-                arcticonsIconPackRepository.installedPackage,
-            ) { mode, enabled, installed ->
-                if (!enabled || installed == null) HomeAppIconMode.TEXT else HomeAppIconMode.fromStored(mode)
-            }
-        ) { mode ->
-            _uiState.value = _uiState.value.copy(homeAppIconMode = mode)
-            if (mode != HomeAppIconMode.TEXT) {
+                combine(
+                    preferencesManager.homeAppIconModeFlow,
+                    preferencesManager.useRealHomeIconsFlow,
+                ) { mode, useReal -> mode to useReal },
+                combine(
+                    preferencesManager.useArcticonsDrawerIconsFlow,
+                    arcticonsIconPackRepository.installedPackage,
+                ) { enabled, installed -> enabled to installed },
+            ) { modeAndReal, arcticons -> modeAndReal to arcticons }
+        ) { (modeAndReal, arcticons) ->
+            val (mode, useReal) = modeAndReal
+            val (arcticonsEnabled, arcticonsInstalled) = arcticons
+            val effective =
+                if (useReal || (arcticonsEnabled && arcticonsInstalled != null)) {
+                    HomeAppIconMode.fromStored(mode)
+                } else {
+                    HomeAppIconMode.TEXT
+                }
+            _uiState.value =
+                _uiState.value.copy(homeAppIconMode = effective, useRealHomeIcons = useReal)
+            if (effective != HomeAppIconMode.TEXT) {
                 viewModelScope.launch { arcticonsIconPackRepository.warmUp() }
             }
         }
     }
 
     suspend fun loadArcticonsIcon(app: AppInfo) = arcticonsIconPackRepository.getIcon(app)
+
+    /**
+     * Home favorite icon: full-color originals win when enabled, Arcticons stays as fallback
+     * (e.g. shortcut rows without a resolvable original).
+     */
+    suspend fun loadHomeFavoriteIcon(app: AppInfo): Drawable? =
+        if (_uiState.value.useRealHomeIcons) {
+            realAppIconRepository.getIcon(app) ?: arcticonsIconPackRepository.getIcon(app)
+        } else {
+            arcticonsIconPackRepository.getIcon(app)
+        }
+
+    /** Full-color original for shortcut-rail app targets (null when unresolvable). */
+    suspend fun loadRealShortcutIcon(app: AppInfo): Drawable? = realAppIconRepository.getIcon(app)
 
     fun refreshArcticonsInstallState() = arcticonsIconPackRepository.refreshInstalledPackage()
 

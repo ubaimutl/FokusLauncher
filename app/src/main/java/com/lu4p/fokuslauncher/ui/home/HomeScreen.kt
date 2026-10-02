@@ -60,6 +60,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.lu4p.fokuslauncher.data.model.AppInfo
+import com.lu4p.fokuslauncher.data.model.ShortcutTarget
 import com.lu4p.fokuslauncher.data.model.appListStableKey
 import com.lu4p.fokuslauncher.data.model.appProfileKey
 import com.lu4p.fokuslauncher.ui.settings.ShortcutActionPickerDialog
@@ -160,7 +161,7 @@ fun HomeScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         CompositionLocalProvider(
-            LocalHomeIconLoader provides remember(viewModel) { { app -> viewModel.loadArcticonsIcon(app) } }
+            LocalHomeIconLoader provides remember(viewModel) { { app -> viewModel.loadHomeFavoriteIcon(app) } }
         ) {
             HomeScreenContent(
             uiState = uiState,
@@ -201,6 +202,7 @@ fun HomeScreen(
             onPomodoroSelectMode = viewModel::pomodoroSelectMode,
             doubleTapEmptyEnabled = uiState.doubleTapEmptyActionEnabled,
             onDoubleTapEmpty = onDoubleTapEmpty,
+            loadRealIcon = remember(viewModel) { { app -> viewModel.loadRealShortcutIcon(app) } },
         )
         }
     }
@@ -312,6 +314,8 @@ fun HomeScreenContent(
     onPomodoroSelectMode: (PomodoroMode) -> Unit = {},
     doubleTapEmptyEnabled: Boolean = false,
     onDoubleTapEmpty: () -> Unit = {},
+    /** Full-color original loader for shortcut-rail app targets (null = vectors only). */
+    loadRealIcon: (suspend (AppInfo) -> android.graphics.drawable.Drawable?)? = null,
 ) {
     val play = LocalSystemClickSound.current
     val noIndication = remember { MutableInteractionSource() }
@@ -381,6 +385,7 @@ fun HomeScreenContent(
                     HomeFavoritesSection(
                         homeAlignment = uiState.homeAlignment,
                         homeAppIconMode = uiState.homeAppIconMode,
+                        useRealIcons = uiState.useRealHomeIcons,
                         favorites = favorites,
                         installedApps = installedApps,
                         rightSideShortcuts = rightSideShortcuts,
@@ -390,7 +395,8 @@ fun HomeScreenContent(
                         notificationIndicatorUiState = notificationIndicatorUiState,
                         onLabelClick = onLabelClick,
                         onLabelLongPress = onLabelLongPress,
-                        onIconClick = onIconClick
+                        onIconClick = onIconClick,
+                        loadRealIcon = loadRealIcon,
                     )
                 }
 
@@ -716,6 +722,7 @@ private fun HomeWidgetsSection(
 private fun FavoritesList(
     favorites: List<FavoriteApp>,
     homeAppIconMode: HomeAppIconMode,
+    useRealIcons: Boolean = false,
     installedApps: List<AppInfo>,
     profileDisplayNameOverrides: Map<String, String>,
     horizontalAlignment: Alignment.Horizontal,
@@ -735,6 +742,7 @@ private fun FavoritesList(
             FavoriteAppItem(
                 fav = fav,
                 homeAppIconMode = homeAppIconMode,
+                useRealIcons = useRealIcons,
                 installedApps = installedApps,
                 profileDisplayNameOverrides = profileDisplayNameOverrides,
                 onClick = { onLabelClick(fav) },
@@ -757,6 +765,9 @@ private fun ShortcutIconsColumn(
     verticalSpacing: Dp,
     modifier: Modifier = Modifier,
     outlined: Boolean = false,
+    installedApps: List<AppInfo> = emptyList(),
+    useRealIcons: Boolean = false,
+    loadRealIcon: (suspend (AppInfo) -> android.graphics.drawable.Drawable?)? = null,
 ) {
     Column(
         modifier = modifier.wrapContentHeight(align = Alignment.Bottom),
@@ -770,6 +781,9 @@ private fun ShortcutIconsColumn(
             touchTargetSize = touchTargetSize,
             iconAlignment = iconAlignment,
             outlined = outlined,
+            installedApps = installedApps,
+            useRealIcons = useRealIcons,
+            loadRealIcon = loadRealIcon,
         )
     }
 }
@@ -778,6 +792,7 @@ private fun ShortcutIconsColumn(
 private fun HomeFavoritesSection(
     homeAlignment: HomeAlignment,
     homeAppIconMode: HomeAppIconMode,
+    useRealIcons: Boolean = false,
     favorites: List<FavoriteApp>,
     installedApps: List<AppInfo>,
     rightSideShortcuts: List<HomeShortcut>,
@@ -789,6 +804,7 @@ private fun HomeFavoritesSection(
     onLabelClick: (FavoriteApp) -> Unit,
     onLabelLongPress: (FavoriteApp) -> Unit,
     onIconClick: (HomeShortcut) -> Unit,
+    loadRealIcon: (suspend (AppInfo) -> android.graphics.drawable.Drawable?)? = null,
 ) {
     val sc =
         launcherFontScale.coerceIn(LauncherFontScale.MIN, LauncherFontScale.MAX)
@@ -816,6 +832,7 @@ private fun HomeFavoritesSection(
                 FavoritesList(
                     favorites = favorites,
                     homeAppIconMode = homeAppIconMode,
+                    useRealIcons = useRealIcons,
                     installedApps = installedApps,
                     profileDisplayNameOverrides = profileDisplayNameOverrides,
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -838,6 +855,9 @@ private fun HomeFavoritesSection(
                             touchTargetSize = shortcutTouchTargetSize,
                             iconAlignment = Alignment.Center,
                             outlined = outlined,
+                            installedApps = installedApps,
+                            useRealIcons = useRealIcons,
+                            loadRealIcon = loadRealIcon,
                         )
                     }
                 }
@@ -855,6 +875,7 @@ private fun HomeFavoritesSection(
                     FavoritesList(
                         favorites = favorites,
                         homeAppIconMode = homeAppIconMode,
+                        useRealIcons = useRealIcons,
                         installedApps = installedApps,
                         profileDisplayNameOverrides = profileDisplayNameOverrides,
                         horizontalAlignment = favAlign,
@@ -881,6 +902,9 @@ private fun HomeFavoritesSection(
                         verticalSpacing = shortcutIconSpacing,
                         modifier = Modifier.offset(y = (-8).dp),
                         outlined = outlined,
+                        installedApps = installedApps,
+                        useRealIcons = useRealIcons,
+                        loadRealIcon = loadRealIcon,
                     )
                 }
                 if (homeAlignment == HomeAlignment.LEFT) {
@@ -905,6 +929,9 @@ private fun RightShortcutIcons(
     touchTargetSize: Dp,
     iconAlignment: Alignment,
     outlined: Boolean = false,
+    installedApps: List<AppInfo> = emptyList(),
+    useRealIcons: Boolean = false,
+    loadRealIcon: (suspend (AppInfo) -> android.graphics.drawable.Drawable?)? = null,
 ) {
     shortcuts.forEachIndexed { index, shortcut ->
         Box(
@@ -914,16 +941,57 @@ private fun RightShortcutIcons(
                     .testTag("right_shortcut_icon_$index"),
             contentAlignment = iconAlignment,
         ) {
-            LauncherIcon(
-                imageVector = MinimalIcons.iconFor(shortcut.iconName),
-                contentDescription = stringResource(R.string.cd_shortcut_icon),
-                tint = MaterialTheme.colorScheme.onBackground,
-                iconSize = iconSize,
-                outlined = outlined,
-            )
+            val realApp = remember(shortcut, installedApps) {
+                if (!useRealIcons || loadRealIcon == null) null
+                else findShortcutRealIconApp(shortcut, installedApps)
+            }
+            val realDrawable by produceState<android.graphics.drawable.Drawable?>(
+                initialValue = null,
+                key1 = realApp?.let(::appListStableKey),
+                key2 = loadRealIcon,
+            ) {
+                value = realApp?.let { loadRealIcon?.invoke(it) }
+            }
+            val drawable = realDrawable
+            if (useRealIcons && drawable != null) {
+                LauncherIcon(
+                    drawable = drawable,
+                    contentDescription = stringResource(R.string.cd_shortcut_icon),
+                    tint = Color.Unspecified,
+                    iconSize = iconSize,
+                    outlined = outlined,
+                    fullColor = true,
+                )
+            } else {
+                LauncherIcon(
+                    imageVector = MinimalIcons.iconFor(shortcut.iconName),
+                    contentDescription = stringResource(R.string.cd_shortcut_icon),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    iconSize = iconSize,
+                    outlined = outlined,
+                )
+            }
         }
     }
 }
+
+/** Installed app behind a shortcut-rail target, for original-icon resolution. */
+private fun findShortcutRealIconApp(shortcut: HomeShortcut, installedApps: List<AppInfo>): AppInfo? =
+    when (val target = shortcut.target) {
+        is ShortcutTarget.App ->
+            installedApps.firstOrNull {
+                it.packageName == target.packageName &&
+                    appProfileKey(it.userHandle) == shortcut.profileKey &&
+                    it.launcherShortcutId == null
+            }
+        is ShortcutTarget.LauncherShortcut ->
+            installedApps.firstOrNull {
+                it.packageName == target.packageName &&
+                    appProfileKey(it.userHandle) == shortcut.profileKey &&
+                    it.launcherShortcutId == target.shortcutId
+            }
+        else -> null
+    }
 
 @Composable
 private fun BoxScope.HomeDefaultLauncherBanner(
@@ -955,6 +1023,7 @@ private fun BoxScope.HomeDefaultLauncherBanner(
 private fun FavoriteAppItem(
     fav: FavoriteApp,
     homeAppIconMode: HomeAppIconMode,
+    useRealIcons: Boolean = false,
     installedApps: List<AppInfo>,
     profileDisplayNameOverrides: Map<String, String>,
     onClick: () -> Unit,
@@ -1015,7 +1084,7 @@ private fun FavoriteAppItem(
         Box {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (iconApp != null && horizontalAlignment != Alignment.End) {
-                    HomeFavoriteIcon(icon, textColor, fav.label)
+                    HomeFavoriteIcon(icon, textColor, fav.label, useRealIcons)
                     if (homeAppIconMode == HomeAppIconMode.WITH_LABEL) Spacer(Modifier.width(12.dp))
                 }
                 if (homeAppIconMode != HomeAppIconMode.ICON_ONLY || iconApp == null) {
@@ -1035,7 +1104,7 @@ private fun FavoriteAppItem(
                 }
                 if (iconApp != null && horizontalAlignment == Alignment.End) {
                     if (homeAppIconMode == HomeAppIconMode.WITH_LABEL) Spacer(Modifier.width(12.dp))
-                    HomeFavoriteIcon(icon, textColor, fav.label)
+                    HomeFavoriteIcon(icon, textColor, fav.label, useRealIcons)
                 }
             }
             if (showDot) {
@@ -1072,15 +1141,25 @@ private fun FavoriteAppItem(
 }
 
 @Composable
-private fun HomeFavoriteIcon(drawable: android.graphics.drawable.Drawable?, tint: Color, label: String) {
+private fun HomeFavoriteIcon(
+    drawable: android.graphics.drawable.Drawable?,
+    tint: Color,
+    label: String,
+    useRealIcons: Boolean = false,
+) {
     Box(
         modifier = Modifier.size(34.dp).semantics { contentDescription = label }
             .testTag("home_app_icon_$label"),
         contentAlignment = Alignment.Center,
     ) {
         if (drawable != null) {
-            LauncherIcon(drawable = drawable, contentDescription = null, tint = tint,
-                iconSize = 32.dp, forceTint = true)
+            if (useRealIcons) {
+                LauncherIcon(drawable = drawable, contentDescription = null,
+                    tint = Color.Unspecified, iconSize = 32.dp, fullColor = true)
+            } else {
+                LauncherIcon(drawable = drawable, contentDescription = null, tint = tint,
+                    iconSize = 32.dp, forceTint = true)
+            }
         } else {
             Box(Modifier.size(24.dp).background(tint.copy(alpha = 0.28f), CircleShape))
         }

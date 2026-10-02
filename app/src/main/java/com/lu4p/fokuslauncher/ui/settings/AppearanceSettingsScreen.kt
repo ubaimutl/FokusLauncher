@@ -255,6 +255,22 @@ fun AppearanceSettingsScreen(
             item { SectionHeader(stringResource(R.string.settings_look_section_icons)) }
             item {
                 SettingsToggleRow(
+                        label = stringResource(R.string.settings_real_home_icons),
+                        checked = uiState.useRealHomeIcons,
+                        onCheckedChange = viewModel::setUseRealHomeIcons,
+                        subtitle = stringResource(R.string.settings_real_home_icons_subtitle),
+                )
+            }
+            item {
+                SettingsToggleRow(
+                        label = stringResource(R.string.settings_real_drawer_icons),
+                        checked = uiState.useRealDrawerIcons,
+                        onCheckedChange = viewModel::setUseRealDrawerIcons,
+                        subtitle = stringResource(R.string.settings_real_drawer_icons_subtitle),
+                )
+            }
+            item {
+                SettingsToggleRow(
                         label = stringResource(R.string.settings_arcticons_drawer_icons),
                         checked = uiState.useArcticonsDrawerIcons && uiState.arcticonsInstalled,
                         onCheckedChange = { checked ->
@@ -277,7 +293,9 @@ fun AppearanceSettingsScreen(
                 )
             }
 
-            if (uiState.useArcticonsDrawerIcons && uiState.arcticonsInstalled) item {
+            if ((uiState.useArcticonsDrawerIcons && uiState.arcticonsInstalled) ||
+                            uiState.useRealHomeIcons
+            ) item {
                 var expanded by remember { mutableStateOf(false) }
                 val onExpandedChange = rememberBooleanChangeWithSystemSound { expanded = it }
                 val labels = mapOf(
