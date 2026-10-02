@@ -151,6 +151,10 @@ data class SettingsUiState(
         val launcherVisualStyle: LauncherVisualStyle = LauncherVisualStyle.CLASSIC,
         /** Text shadow + icon halo; independent of [launcherVisualStyle]. */
         val launcherGlowEnabled: Boolean = false,
+        /** User-defined home accent for [LauncherVisualStyle.CUSTOM] (0 = unset). */
+        val homeCustomAccentArgb: Int = 0,
+        /** User-defined drawer accent for [LauncherVisualStyle.CUSTOM] (0 = unset). */
+        val drawerCustomAccentArgb: Int = 0,
         /**
          * Opt-in Arcticons drawer icons. Off by default to keep the text-first drawer. Requires a
          * whitelisted Arcticons package to be installed.
@@ -458,6 +462,8 @@ constructor(
                                 visualStyle = appearance.visualStyle,
                                 glowEnabled = appearance.glowEnabled,
                                 usesPhotoWallpaper = appearance.usesPhotoWallpaper,
+                                homeCustomAccentArgb = appearance.homeCustomAccentArgb,
+                                drawerCustomAccentArgb = appearance.drawerCustomAccentArgb,
                                 customFontDisplayName = resolvedCustomLabel,
                         )
                     }
@@ -493,6 +499,8 @@ constructor(
                                 launcherFontScale = fontVisual.scale,
                                 launcherVisualStyle = fontVisual.visualStyle,
                                 launcherGlowEnabled = fontVisual.glowEnabled,
+                                homeCustomAccentArgb = fontVisual.homeCustomAccentArgb,
+                                drawerCustomAccentArgb = fontVisual.drawerCustomAccentArgb,
                                 useArcticonsDrawerIcons = useArcticons,
                                 homeAppIconMode = homeIconMode,
                                 arcticonsInstalled = arcticonsInstalled,
@@ -650,6 +658,8 @@ constructor(
                         launcherFontScale = look.launcherFontScale,
                         launcherVisualStyle = look.launcherVisualStyle,
                         launcherGlowEnabled = look.launcherGlowEnabled,
+                        homeCustomAccentArgb = look.homeCustomAccentArgb,
+                        drawerCustomAccentArgb = look.drawerCustomAccentArgb,
                         useArcticonsDrawerIcons = look.useArcticonsDrawerIcons,
                         homeAppIconMode = look.homeAppIconMode,
                         arcticonsInstalled = look.arcticonsInstalled,
@@ -756,6 +766,8 @@ constructor(
             val visualStyle: LauncherVisualStyle,
             val glowEnabled: Boolean,
             val usesPhotoWallpaper: Boolean,
+            val homeCustomAccentArgb: Int = 0,
+            val drawerCustomAccentArgb: Int = 0,
             val customFontDisplayName: String,
     )
 
@@ -766,6 +778,8 @@ constructor(
             val launcherFontScale: Float,
             val launcherVisualStyle: LauncherVisualStyle,
             val launcherGlowEnabled: Boolean,
+            val homeCustomAccentArgb: Int = 0,
+            val drawerCustomAccentArgb: Int = 0,
             val useArcticonsDrawerIcons: Boolean,
             val homeAppIconMode: HomeAppIconMode,
             val arcticonsInstalled: Boolean,
@@ -1362,19 +1376,16 @@ constructor(
     fun setLauncherFontScale(scale: Float) =
             launchPreferences { setLauncherFontScale(scale) }
 
-    fun setLauncherVisualStyle(style: LauncherVisualStyle) {
-        viewModelScope.launch {
-            if (preferencesManager.launcherAppearanceFlow.first().usesPhotoWallpaper) return@launch
-            preferencesManager.setLauncherVisualStyle(style)
-        }
-    }
+    fun setLauncherVisualStyle(style: LauncherVisualStyle) =
+            launchPreferences { setLauncherVisualStyle(style) }
 
-    fun setLauncherGlowEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            if (preferencesManager.launcherAppearanceFlow.first().usesPhotoWallpaper) return@launch
-            preferencesManager.setLauncherGlowEnabled(enabled)
-        }
-    }
+    fun setLauncherGlowEnabled(enabled: Boolean) =
+            launchPreferences { setLauncherGlowEnabled(enabled) }
+
+    fun setHomeCustomAccentColor(argb: Int) = launchPreferences { setHomeCustomAccentColor(argb) }
+
+    fun setDrawerCustomAccentColor(argb: Int) =
+            launchPreferences { setDrawerCustomAccentColor(argb) }
 
     fun setPhotoWallpaperOutlineWidthDp(widthDp: Float) =
             launchPreferences { setPhotoWallpaperOutlineWidthDp(widthDp) }

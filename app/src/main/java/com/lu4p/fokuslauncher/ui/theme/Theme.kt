@@ -43,18 +43,22 @@ private val FokusColorSchemeClassic = darkColorScheme(
         onErrorContainer = Color(0xFFFFDAD4),
 )
 
-fun fokusColorSchemeFor(style: LauncherVisualStyle): ColorScheme {
-    val palette = style.neonPalette() ?: return FokusColorSchemeClassic
+fun fokusColorSchemeFor(style: LauncherVisualStyle, customAccentArgb: Int = 0): ColorScheme {
+    val palette = style.neonPalette(customAccentArgb) ?: return FokusColorSchemeClassic
     val sheetSurface = palette.primary.copy(alpha = 0.09f).compositeOver(Black)
     val segmentSelectedSurface =
             palette.primary.copy(alpha = 0.22f).compositeOver(Black)
+    // Text drawn ON colored fills must contrast with the fill: curated presets keep their
+    // black-on-color look, while near-black customs flip to white instead of vanishing.
     return FokusColorSchemeClassic.copy(
             primary = palette.primary,
             secondary = palette.muted,
+            onPrimary = legibleTextOn(palette.primary, Black),
+            onSecondary = legibleTextOn(palette.muted, Black),
             onBackground = palette.primary,
             onSurface = palette.primary,
             secondaryContainer = segmentSelectedSurface,
-            onSecondaryContainer = palette.primary,
+            onSecondaryContainer = legibleTextOn(segmentSelectedSurface, palette.primary),
             surfaceVariant = sheetSurface,
             onSurfaceVariant = palette.muted,
             error = NeonDestructiveRed,
@@ -71,9 +75,13 @@ fun FokusLauncherTheme(
         fontScale: Float = 1f,
         visualStyle: LauncherVisualStyle = LauncherVisualStyle.CLASSIC,
         glowEnabled: Boolean = false,
+        customAccentArgb: Int = 0,
         content: @Composable () -> Unit
 ) {
-    val colorScheme = remember(visualStyle) { fokusColorSchemeFor(visualStyle) }
+    val colorScheme =
+            remember(visualStyle, customAccentArgb) {
+                fokusColorSchemeFor(visualStyle, customAccentArgb)
+            }
     val typography =
             remember(fontFamily, fontScale, visualStyle, glowEnabled) {
                 fokusTypographyForLauncher(
@@ -88,11 +96,11 @@ fun FokusLauncherTheme(
                 fontScale.coerceIn(LauncherFontScale.MIN, LauncherFontScale.MAX)
             }
     val iconGlow =
-            remember(visualStyle, glowEnabled) {
+            remember(visualStyle, glowEnabled, customAccentArgb) {
                 if (!glowEnabled) {
                     LauncherIconGlowSpec.None
                 } else {
-                    val palette = visualStyle.neonPalette()
+                    val palette = visualStyle.neonPalette(customAccentArgb)
                     val halo = palette?.primary ?: White
                     LauncherIconGlowSpec(enabled = true, haloColor = halo)
                 }

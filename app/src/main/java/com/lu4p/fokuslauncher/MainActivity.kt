@@ -112,17 +112,17 @@ class MainActivity : AppCompatActivity() {
                 preferencesManager.appLocaleTagFlow.collect { value = it }
             }
             ProvideAppLocale(localeTag = appLocaleTag) {
-                val wallpaperIsPhoto = launcherAppearance.usesPhotoWallpaper
+                // Outer theme is always classic: settings and onboarding stay readable no
+                // matter how dark the home/drawer customs get. Home and drawer apply their
+                // own surface themes inside FokusNavGraph.
                 FokusLauncherTheme(
                         fontFamily =
                                 composeFontFamilyFromStoredName(launcherFontFamilyName) {
                                     customFontStore.resolveFile(it)
                                 },
                         fontScale = launcherFontScale,
-                        visualStyle =
-                                if (wallpaperIsPhoto) LauncherVisualStyle.CLASSIC
-                                else launcherAppearance.visualStyle,
-                        glowEnabled = launcherAppearance.glowEnabled && !wallpaperIsPhoto,
+                        visualStyle = LauncherVisualStyle.CLASSIC,
+                        glowEnabled = launcherAppearance.glowEnabled,
                 ) {
                     FokusNavGraph()
                 }

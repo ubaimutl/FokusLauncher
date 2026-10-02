@@ -272,6 +272,7 @@
     <string name="settings_notification_indicator_color_pink">Pink</string>
     <string name="settings_notification_indicator_color_white">White</string>
     <string name="settings_notification_indicator_color_gray">Gray</string>
+    <string name="settings_notification_indicator_color_custom">Custom (%1$s)</string>
     <string name="settings_show_home_screen_time">Show screen time</string>
     <string name="settings_show_home_screen_time_subtitle">Screen-on time in the past 24 hours</string>
     <string name="settings_show_home_screen_time_subtitle_grant_access">Requires usage access — turn on to grant in system settings</string>
@@ -468,6 +469,18 @@
     <string name="visual_style_sage">Sage</string>
     <string name="visual_style_rose">Rose</string>
     <string name="visual_style_emerald">Emerald</string>
+    <string name="visual_style_custom">Custom</string>
+    <string name="settings_custom_home_title">Home custom color</string>
+    <string name="settings_custom_drawer_title">Drawer custom color</string>
+    <string name="settings_custom_surface_subtitle">Swatches or your own hex — black, dark gray, anything. Applies only here; settings screens always stay classic so they stay readable.</string>
+    <string name="settings_custom_indicator_title">Custom indicator color</string>
+    <string name="settings_custom_indicator_subtitle">Pick a swatch or type your own hex color. It applies as soon as the hex is valid.</string>
+    <string name="settings_custom_color_hex_hint">#RRGGBB</string>
+    <string name="settings_custom_color_invalid">Invalid hex color</string>
+    <string name="settings_real_home_icons">Home real app icons</string>
+    <string name="settings_real_home_icons_subtitle">Full-color originals on home favorites and the shortcut rail, small like Arcticons. Wins over Arcticons on home.</string>
+    <string name="settings_real_drawer_icons">Drawer real app icons</string>
+    <string name="settings_real_drawer_icons_subtitle">Full-color originals beside drawer labels. Wins over Arcticons in the drawer.</string>
 
     <plurals name="settings_shortcuts_configured">
         <item quantity="one">%d shortcut configured</item>

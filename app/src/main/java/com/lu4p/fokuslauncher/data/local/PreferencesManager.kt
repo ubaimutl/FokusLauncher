@@ -190,12 +190,19 @@ class PreferencesManager @Inject constructor(@param:ApplicationContext private v
         private val HOME_ALIGNMENT_KEY = stringPreferencesKey("home_alignment")
         private val LAUNCHER_VISUAL_STYLE_KEY = stringPreferencesKey("launcher_visual_style")
         private val LAUNCHER_GLOW_ENABLED_KEY = booleanPreferencesKey("launcher_glow_enabled")
+        private val LAUNCHER_CUSTOM_ACCENT_KEY = intPreferencesKey("launcher_custom_accent")
+        private val LAUNCHER_DRAWER_CUSTOM_ACCENT_KEY =
+                intPreferencesKey("launcher_drawer_custom_accent")
         /**
          * Opt-in Arcticons icon-pack icons beside drawer list labels. Off by default so the
          * launcher stays text-first. Requires a whitelisted Arcticons package to be installed.
          */
         private val USE_ARCTICONS_DRAWER_ICONS_KEY =
                 booleanPreferencesKey("use_arcticons_drawer_icons")
+        /** Full-color original icons beside home favorites / shortcut rail (small, like Arcticons). */
+        private val USE_REAL_HOME_ICONS_KEY = booleanPreferencesKey("use_real_home_icons")
+        /** Full-color original icons beside drawer list labels. */
+        private val USE_REAL_DRAWER_ICONS_KEY = booleanPreferencesKey("use_real_drawer_icons")
         private val HOME_APP_ICON_MODE_KEY = stringPreferencesKey("home_app_icon_mode")
         /**
          * True after the user keeps or sets an image wallpaper; false after setting black wallpaper
@@ -961,8 +968,19 @@ class PreferencesManager @Inject constructor(@param:ApplicationContext private v
                         visualStyle = visualStyle,
                         glowEnabled = glowEnabled,
                         usesPhotoWallpaper = usesPhotoWallpaper,
+                        homeCustomAccentArgb = prefs[LAUNCHER_CUSTOM_ACCENT_KEY] ?: 0,
+                        drawerCustomAccentArgb = prefs[LAUNCHER_DRAWER_CUSTOM_ACCENT_KEY] ?: 0,
                 )
             }
+
+    val homeCustomAccentColorFlow: Flow<Int> = prefFlow(LAUNCHER_CUSTOM_ACCENT_KEY, 0)
+
+    suspend fun setHomeCustomAccentColor(argb: Int) = setPref(LAUNCHER_CUSTOM_ACCENT_KEY, argb)
+
+    val drawerCustomAccentColorFlow: Flow<Int> = prefFlow(LAUNCHER_DRAWER_CUSTOM_ACCENT_KEY, 0)
+
+    suspend fun setDrawerCustomAccentColor(argb: Int) =
+            setPref(LAUNCHER_DRAWER_CUSTOM_ACCENT_KEY, argb)
 
     suspend fun setLauncherVisualStyle(style: LauncherVisualStyle) {
         context.fokusLauncherPreferencesDataStore.edit { prefs ->

@@ -66,8 +66,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import android.view.WindowManager
+import com.lu4p.fokuslauncher.data.model.LauncherVisualStyle
 import com.lu4p.fokuslauncher.data.model.ShortcutTarget
 import com.lu4p.fokuslauncher.data.local.TwoFingerDirection
+import com.lu4p.fokuslauncher.ui.theme.FokusLauncherTheme
+import com.lu4p.fokuslauncher.ui.theme.composeFontFamilyFromStoredName
 import com.lu4p.fokuslauncher.ui.drawer.AppDrawerScreen
 import com.lu4p.fokuslauncher.ui.drawer.AppDrawerViewModel
 import com.lu4p.fokuslauncher.ui.home.HomeScreen
@@ -134,6 +137,31 @@ private const val HORIZONTAL_TRIGGER_RATIO = 0.3f
 private const val HORIZONTAL_DRAG_GAIN = 1.8f
 
 private enum class SwipeSide { LEFT, RIGHT }
+
+/**
+ * Per-surface launcher theme (home vs drawer): same style, glow and font as the global theme,
+ * but with that surface's own custom accent. Lets dark customs live on home/drawer while
+ * settings screens stay on the readable classic theme.
+ */
+@Composable
+private fun FokusSurfaceTheme(
+        visualStyle: LauncherVisualStyle,
+        glowEnabled: Boolean,
+        customAccentArgb: Int,
+        fontFamilyName: String,
+        fontScale: Float,
+        resolveFontFile: (String) -> java.io.File?,
+        content: @Composable () -> Unit,
+) {
+    FokusLauncherTheme(
+            fontFamily = composeFontFamilyFromStoredName(fontFamilyName, resolveFontFile),
+            fontScale = fontScale,
+            visualStyle = visualStyle,
+            glowEnabled = glowEnabled,
+            customAccentArgb = customAccentArgb,
+            content = content,
+    )
+}
 
 private fun snapBackAnimationSpec() = spring<Float>(
     dampingRatio = Spring.DampingRatioNoBouncy,
@@ -725,6 +753,7 @@ fun FokusNavGraph(
                         }
                     }
                 }
+                } // FokusSurfaceTheme(home)
 
                 // ── App Drawer overlay ─────────────────────────────────────
                 // Scrim fades in place (no slide) so home can dim underneath without a wallpaper
@@ -771,18 +800,28 @@ fun FokusNavGraph(
                     enter = drawerEnterSlide,
                     exit = drawerExitSlide,
                 ) {
-                    AppDrawerScreen(
-                        viewModel = appDrawerViewModel,
-                        onSettingsClick = {
-                            navController.navigateSingleTop(Routes.SETTINGS)
-                        },
-                        onEditCategoryApps = { category ->
-                            navController.navigateSingleTop(
-                                    "${Routes.SETTINGS_CATEGORY_APPS}/${Uri.encode(category)}"
-                            )
-                        },
-                        onClose = { showDrawer = false }
-                    )
+                    // Drawer surface: own custom color, independent of home and settings.
+                    FokusSurfaceTheme(
+                        visualStyle = launcherAppearance.visualStyle,
+                        glowEnabled = launcherAppearance.glowEnabled,
+                        customAccentArgb = launcherAppearance.drawerCustomAccentArgb,
+                        fontFamilyName = launcherFontFamilyName,
+                        fontScale = launcherFontScale,
+                        resolveFontFile = navGraphViewModel::resolveCustomFontFile,
+                    ) {
+                        AppDrawerScreen(
+                            viewModel = appDrawerViewModel,
+                            onSettingsClick = {
+                                navController.navigateSingleTop(Routes.SETTINGS)
+                            },
+                            onEditCategoryApps = { category ->
+                                navController.navigateSingleTop(
+                                        "${Routes.SETTINGS_CATEGORY_APPS}/${Uri.encode(category)}"
+                                )
+                            },
+                            onClose = { showDrawer = false }
+                        )
+                    }
                 }
             }
 

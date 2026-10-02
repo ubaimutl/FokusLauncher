@@ -15,8 +15,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -40,6 +44,7 @@ import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -61,6 +66,8 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,11 +101,14 @@ import com.lu4p.fokuslauncher.ui.settings.components.SectionHeader
 import com.lu4p.fokuslauncher.ui.theme.LocalLauncherFontScale
 import com.lu4p.fokuslauncher.ui.theme.LocalLauncherIconGlow
 import com.lu4p.fokuslauncher.ui.theme.composeFontFamilyFromStoredName
+import com.lu4p.fokuslauncher.ui.theme.formatCustomHexColor
 import com.lu4p.fokuslauncher.ui.theme.launcherIconDp
+import com.lu4p.fokuslauncher.ui.theme.parseCustomHexColor
 import com.lu4p.fokuslauncher.ui.theme.settingsPreviewColor
 import com.lu4p.fokuslauncher.ui.theme.withoutLauncherTextGlow
 import com.lu4p.fokuslauncher.ui.util.OnResumeEffect
 import com.lu4p.fokuslauncher.ui.util.formatShortcutTargetDisplay
+import com.lu4p.fokuslauncher.ui.util.clickableWithSystemSound
 import com.lu4p.fokuslauncher.ui.util.rememberBooleanChangeWithSystemSound
 import com.lu4p.fokuslauncher.ui.util.rememberClickWithSystemSound
 import java.text.Collator
@@ -377,18 +387,30 @@ internal fun NotificationIndicatorColorDropdown(
         onColorSelected: (NotificationIndicatorColorPreset) -> Unit,
 ) {
     val options = remember { NotificationIndicatorColorPreset.entries }
+    val isCustomColor = remember(currentColor) {
+        NotificationIndicatorColorPreset.entries.none { it.argb == currentColor }
+    }
     val currentPreset = remember(currentColor) {
         NotificationIndicatorColorPreset.fromArgb(currentColor)
     }
     var expanded by remember { mutableStateOf(false) }
     val onExpandedChange = rememberBooleanChangeWithSystemSound { expanded = it }
+    val selectedDisplayText =
+            if (isCustomColor) {
+                stringResource(
+                        R.string.settings_notification_indicator_color_custom,
+                        formatCustomHexColor(currentColor),
+                )
+            } else {
+                stringResource(currentPreset.labelRes)
+            }
     SettingsDropdown(
             title = stringResource(R.string.settings_notification_indicator_color),
             options = options,
             expanded = expanded,
             onExpandedChange = onExpandedChange,
-            selectedDisplayText = stringResource(currentPreset.labelRes),
-            fieldTextColor = Color(currentPreset.argb),
+            selectedDisplayText = selectedDisplayText,
+            fieldTextColor = Color(currentColor),
             menuItemTextColor = { Color(it.argb) },
             itemContent = { preset ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -708,38 +730,41 @@ internal fun PhotoWallpaperDrawerOverlaySlider(
 internal fun LauncherVisualStyleDropdown(
         currentStyle: LauncherVisualStyle,
         onStyleSelected: (LauncherVisualStyle) -> Unit,
-        homeUsesPhotoWallpaper: Boolean,
+        customAccentArgb: Int = 0,
 ) {
     val options = remember { LauncherVisualStyle.entries.toList() }
     var expanded by remember { mutableStateOf(false) }
     val onExpandedChange = rememberBooleanChangeWithSystemSound { expanded = it }
-    LaunchedEffect(homeUsesPhotoWallpaper) {
-        if (homeUsesPhotoWallpaper) expanded = false
-    }
-    val displayStyle =
-            if (homeUsesPhotoWallpaper) LauncherVisualStyle.CLASSIC else currentStyle
-    val selectedLabel = stringResource(displayStyle.labelRes)
-    val fieldPreviewColor = displayStyle.settingsPreviewColor()
-    val lockedSubtitle = stringResource(R.string.settings_look_locked_image_wallpaper)
+    val selectedLabel = stringResource(currentStyle.labelRes)
+    // The settings UI stays classic: a dark home custom must not tint this field's own text.
+    val fieldPreviewColor =
+            if (currentStyle == LauncherVisualStyle.CUSTOM) null
+            else currentStyle.settingsPreviewColor(customAccentArgb)
     val normalSubtitle = stringResource(R.string.settings_visual_style_subtitle)
+    val settingsOnBackground = MaterialTheme.colorScheme.onBackground
     val menuGlowEnabled = LocalLauncherIconGlow.current.enabled
     val menuFontBlurBoost =
             LocalLauncherFontScale.current.coerceIn(LauncherFontScale.MIN, LauncherFontScale.MAX)
                     .coerceIn(0.85f, 1.45f)
     SettingsDropdown(
             title = stringResource(R.string.settings_visual_style_label),
-            subtitle = if (homeUsesPhotoWallpaper) lockedSubtitle else normalSubtitle,
+            subtitle = normalSubtitle,
             options = options,
             expanded = expanded,
             onExpandedChange = onExpandedChange,
-            fieldEnabled = !homeUsesPhotoWallpaper,
             selectedDisplayText = selectedLabel,
             fieldTextColor = fieldPreviewColor,
-            menuItemTextColor = { it.settingsPreviewColor() },
+            menuItemTextColor = {
+                if (it == LauncherVisualStyle.CUSTOM) settingsOnBackground
+                else it.settingsPreviewColor(customAccentArgb)
+            },
             itemContent = { style ->
-                val preview = style.settingsPreviewColor()
+                val isCustomItem = style == LauncherVisualStyle.CUSTOM
+                val preview =
+                        if (isCustomItem) settingsOnBackground
+                        else style.settingsPreviewColor(customAccentArgb)
                 val itemTextStyle =
-                        if (menuGlowEnabled) {
+                        if (menuGlowEnabled && !isCustomItem) {
                             MaterialTheme.typography.bodyLarge.copy(
                                     color = Color.Unspecified,
                                     shadow =
@@ -762,6 +787,113 @@ internal fun LauncherVisualStyleDropdown(
             },
             onItemSelected = onStyleSelected,
     )
+}
+
+/** Quick-pick swatches for custom colors (black, dark grays, primaries, white). */
+private val customColorSwatches =
+        listOf(
+                0xFF000000.toInt(),
+                0xFF212121.toInt(),
+                0xFF616161.toInt(),
+                0xFFFFFFFF.toInt(),
+                0xFFFF5252.toInt(),
+                0xFFFF9800.toInt(),
+                0xFFFFEB3B.toInt(),
+                0xFF4CAF50.toInt(),
+                0xFF00BCD4.toInt(),
+                0xFF2196F3.toInt(),
+                0xFF9C27B0.toInt(),
+                0xFFE91E63.toInt(),
+        )
+
+/**
+ * Hex input + swatches for a user-defined color (accent or notification indicator).
+ * Applies live whenever the text parses as `#RRGGBB` / `#AARRGGBB`.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun CustomHexColorRow(
+        title: String,
+        subtitle: String,
+        currentArgb: Int,
+        onColorApplied: (Int) -> Unit,
+) {
+    var text by remember(currentArgb) { mutableStateOf(formatCustomHexColor(currentArgb)) }
+    val parsed = remember(text) { parseCustomHexColor(text) }
+    LaunchedEffect(currentArgb) {
+        val formatted = formatCustomHexColor(currentArgb)
+        if (!text.equals(formatted, ignoreCase = true) && parseCustomHexColor(text) == null) {
+            text = formatted
+        }
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            Box(
+                    modifier =
+                            Modifier.size(32.dp)
+                                    .background(Color(currentArgb), CircleShape)
+                                    .border(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                                            CircleShape,
+                                    ),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+                value = text,
+                onValueChange = { raw ->
+                    text = raw
+                    parseCustomHexColor(raw)?.let { onColorApplied(it) }
+                },
+                label = { Text(stringResource(R.string.settings_custom_color_hex_hint)) },
+                isError = parsed == null,
+                supportingText =
+                        if (parsed == null) {
+                            {
+                                Text(
+                                        text = stringResource(R.string.settings_custom_color_invalid),
+                                        color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        } else null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(12.dp))
+        FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            customColorSwatches.forEach { argb ->
+                Box(
+                        modifier =
+                                Modifier.size(36.dp)
+                                        .background(Color(argb), CircleShape)
+                                        .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                                                CircleShape,
+                                        )
+                                        .clickableWithSystemSound { onColorApplied(argb) },
+                )
+            }
+        }
+    }
 }
 
 @Composable

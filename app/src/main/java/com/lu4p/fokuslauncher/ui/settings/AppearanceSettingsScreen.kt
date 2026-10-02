@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lu4p.fokuslauncher.R
 import com.lu4p.fokuslauncher.data.font.CustomFontImportFailure
+import com.lu4p.fokuslauncher.data.model.LauncherVisualStyle
 import com.lu4p.fokuslauncher.media.MediaNotificationHelper
 import com.lu4p.fokuslauncher.ui.components.FokusAlertDialog
 import com.lu4p.fokuslauncher.ui.components.FokusTextButton
@@ -220,24 +221,33 @@ fun AppearanceSettingsScreen(
                 LauncherVisualStyleDropdown(
                         currentStyle = uiState.launcherVisualStyle,
                         onStyleSelected = viewModel::setLauncherVisualStyle,
-                        homeUsesPhotoWallpaper = uiState.homeUsesPhotoWallpaper,
+                        customAccentArgb = uiState.homeCustomAccentArgb,
                 )
+            }
+            if (uiState.launcherVisualStyle == LauncherVisualStyle.CUSTOM) {
+                item {
+                    CustomHexColorRow(
+                            title = stringResource(R.string.settings_custom_home_title),
+                            subtitle = stringResource(R.string.settings_custom_surface_subtitle),
+                            currentArgb = uiState.homeCustomAccentArgb,
+                            onColorApplied = viewModel::setHomeCustomAccentColor,
+                    )
+                }
+                item {
+                    CustomHexColorRow(
+                            title = stringResource(R.string.settings_custom_drawer_title),
+                            subtitle = stringResource(R.string.settings_custom_surface_subtitle),
+                            currentArgb = uiState.drawerCustomAccentArgb,
+                            onColorApplied = viewModel::setDrawerCustomAccentColor,
+                    )
+                }
             }
             item {
                 SettingsToggleRow(
                         label = stringResource(R.string.settings_glow_label),
-                        checked =
-                                uiState.launcherGlowEnabled && !uiState.homeUsesPhotoWallpaper,
+                        checked = uiState.launcherGlowEnabled,
                         onCheckedChange = viewModel::setLauncherGlowEnabled,
-                        subtitle =
-                                stringResource(
-                                        if (uiState.homeUsesPhotoWallpaper) {
-                                            R.string.settings_look_locked_image_wallpaper
-                                        } else {
-                                            R.string.settings_glow_subtitle
-                                        }
-                                ),
-                        enabled = !uiState.homeUsesPhotoWallpaper,
+                        subtitle = stringResource(R.string.settings_glow_subtitle),
                 )
             }
 
@@ -370,6 +380,14 @@ fun AppearanceSettingsScreen(
                     NotificationIndicatorColorDropdown(
                             currentColor = uiState.notificationIndicatorColor,
                             onColorSelected = viewModel::setNotificationIndicatorColorPreset,
+                    )
+                }
+                item {
+                    CustomHexColorRow(
+                            title = stringResource(R.string.settings_custom_indicator_title),
+                            subtitle = stringResource(R.string.settings_custom_indicator_subtitle),
+                            currentArgb = uiState.notificationIndicatorColor,
+                            onColorApplied = viewModel::setNotificationIndicatorColor,
                     )
                 }
             }

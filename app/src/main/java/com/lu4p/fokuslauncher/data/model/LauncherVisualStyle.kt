@@ -15,7 +15,8 @@ enum class LauncherVisualStyle(@param:StringRes val labelRes: Int) {
     SKY(R.string.visual_style_sky),
     SAGE(R.string.visual_style_sage),
     ROSE(R.string.visual_style_rose),
-    EMERALD(R.string.visual_style_emerald);
+    EMERALD(R.string.visual_style_emerald),
+    CUSTOM(R.string.visual_style_custom);
 
     companion object {
         fun fromString(value: String): LauncherVisualStyle {
